@@ -1,0 +1,1235 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>대장장이 키우기</title>
+<style>
+  :root{
+    --gold:#ffd24a; --blue:#8b6cff; --white:#eef1f5; --grey:#8a8a8a; --dark-red:#c0392b;
+    --bg0:#1a1410; --bg1:#2a2018; --panel:rgba(28,22,17,.82); --panel2:rgba(45,35,26,.88);
+    --line:#5a4630; --ok:#5fd17a; --bad:#e35d5d; --txt:#f0e6d6; --dim:#b8a888;
+  }
+  *{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
+  html,body{margin:0;padding:0;height:100%;}
+  body{
+    background:#0b0907; color:var(--txt);
+    font-family:"Apple SD Gothic Neo","Malgun Gothic","Noto Sans KR",system-ui,sans-serif;
+    display:flex; justify-content:center; align-items:stretch;
+    overscroll-behavior:none;
+  }
+  #app{
+    position:relative; width:100%; max-width:480px; min-height:100vh; height:100vh;
+    background:var(--bg0); overflow:hidden; display:flex; flex-direction:column;
+    box-shadow:0 0 40px rgba(0,0,0,.6);
+  }
+  /* 배경 */
+  #bgLayer{position:absolute; inset:0; z-index:0; overflow:hidden; background:linear-gradient(160deg,#2a1d12,#140d08);}
+  #bgImg{position:absolute; inset:0; width:100%; height:100%; object-fit:cover; opacity:.78; filter:saturate(1.02) brightness(.78);}
+  #bgLayer.missing #bgImg{display:none;}
+  #bgLayer::after{content:""; position:absolute; inset:0;
+    background:
+      radial-gradient(circle at 50% 45%,rgba(255,147,55,.06),transparent 48%),
+      linear-gradient(180deg,rgba(10,7,4,.58),rgba(10,7,4,.82));}
+  /* 콘텐츠 위 레이어 */
+  #stage{position:relative; z-index:2; display:flex; flex-direction:column; height:100%; padding:6px 8px 8px;}
+
+  .imgbox{position:relative; display:flex; align-items:center; justify-content:center; overflow:hidden;}
+  .imgbox img{width:100%; height:100%; object-fit:contain; display:block;}
+  .imgbox.missing img{display:none;}
+  .imgbox.missing::after{
+    content:attr(data-fb); color:var(--dim); font-size:12px; font-weight:700; text-align:center;
+    padding:4px; line-height:1.2; opacity:.85;
+  }
+
+  /* 1. 모험가 영역 */
+  #advArea{display:flex; gap:8px; align-items:flex-start; min-height:106px;
+    background:rgba(13,9,6,.78); border:1px solid rgba(90,70,48,.72); border-radius:10px; padding:5px;
+    box-shadow:0 4px 12px rgba(0,0,0,.24);}
+  #portraitWrap{position:relative; width:86px; height:106px; flex:0 0 auto;
+    border:2px solid var(--line); border-radius:8px; background:rgba(20,14,9,.6); overflow:hidden;}
+  #portraitWrap.missing{background:linear-gradient(160deg,#3a2c1d,#241a11);}
+  #badge{position:absolute; left:-6px; top:-6px; width:40px; height:40px; z-index:3; filter:drop-shadow(0 2px 3px rgba(0,0,0,.6));}
+  #badge.missing{display:flex; align-items:center; justify-content:center; border-radius:50%;
+    background:#2a2018; border:2px solid var(--gold); font-size:9px; font-weight:800; color:var(--gold);}
+  #advRight{flex:1 1 auto; min-width:0; display:flex; flex-direction:column; gap:4px; padding-top:1px;}
+  #advName{font-size:14px; font-weight:800; letter-spacing:.2px; text-shadow:0 1px 2px #000;}
+  #advName .grade{font-size:11px; padding:1px 7px; border-radius:10px; margin-left:6px; vertical-align:middle;
+    background:#000; border:1px solid var(--line);}
+  #advMeta{font-size:11px; color:var(--dim);}
+  #bubble{position:relative; background:#f3ead6; color:#241a10; border-radius:10px; padding:7px 10px;
+    font-size:12px; font-weight:600; line-height:1.3; min-height:34px; box-shadow:0 3px 8px rgba(0,0,0,.4);
+    transition:opacity .15s; word-break:keep-all;}
+  #bubble::after{content:""; position:absolute; left:-7px; top:14px; border:7px solid transparent;
+    border-right-color:#f3ead6; border-left:0;}
+  #narration{font-size:10px; color:var(--dim); margin:3px 2px 1px; line-height:1.3; word-break:keep-all; min-height:24px;
+    background:rgba(10,7,4,.7); border-radius:7px; padding:4px 7px;}
+
+  #requestPanel{border:1px solid rgba(255,210,74,.24); background:rgba(20,14,9,.82); border-radius:8px; padding:6px 9px; margin:4px 0 4px;}
+  .request-main{display:flex; justify-content:space-between; gap:8px; align-items:center; font-size:12px;}
+  .request-main span{font-weight:800; color:#f7ead5; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
+  .request-main b{color:var(--gold); font-size:12px; white-space:nowrap;}
+  .request-sub{font-size:10px; color:var(--dim); margin-top:2px; line-height:1.3; word-break:keep-all;}
+
+  /* 2. 만족도 게이지 */
+  #gaugeWrap{margin:5px 0 3px;}
+  #gaugeHead{display:flex; justify-content:space-between; font-size:11px; color:var(--dim); margin-bottom:3px;}
+  #gaugeHead b{color:var(--gold);}
+  #gaugeBar{position:relative; height:20px; background:#100b07; border:1.5px solid var(--line); border-radius:11px; overflow:hidden;}
+  #gaugeBar.pulse{animation:gaugePulse .48s ease-out;}
+  #gaugeFill{height:100%; width:0%; border-radius:10px 0 0 10px;
+    background:linear-gradient(90deg,#e07b39,#ffd24a); transition:width .5s cubic-bezier(.2,.8,.2,1);}
+  #gaugeFill.win{background:linear-gradient(90deg,#3fae5e,#7df59b);}
+  @keyframes gaugePulse{0%{box-shadow:0 0 0 rgba(255,210,74,0);}35%{box-shadow:0 0 16px rgba(255,210,74,.62);}
+    100%{box-shadow:0 0 0 rgba(255,210,74,0);}}
+  #goalMark{position:absolute; top:-3px; bottom:-3px; width:3px; background:#fff;
+    box-shadow:0 0 5px #fff; border-radius:2px; transition:left .3s;}
+  #goalLabel{position:absolute; top:-16px; transform:translateX(-50%); font-size:9px; color:#fff; white-space:nowrap; text-shadow:0 1px 2px #000;}
+  #gaugePct{position:absolute; right:7px; top:50%; transform:translateY(-50%); font-size:11px; font-weight:800; color:#fff; text-shadow:0 1px 2px #000;}
+
+  /* 3. 작업 영역 */
+  #workArea{flex:1.35 1 310px; display:flex; flex-direction:column; justify-content:flex-start; gap:7px; min-height:0;
+    background:linear-gradient(180deg,rgba(33,24,17,.42),rgba(20,14,9,.56));
+    border:1px solid rgba(119,91,55,.72); border-radius:12px; padding:8px; margin:3px 0;
+    box-shadow:inset 0 0 28px rgba(0,0,0,.22),0 0 0 1px rgba(255,210,74,.05); backdrop-filter:blur(1px);}
+  /* 취향 힌트 */
+  #hintRow{display:flex; align-items:center; gap:5px; flex-wrap:wrap; min-height:20px;}
+  .hint-label{font-size:10px; color:var(--dim); white-space:nowrap;}
+  .hint-chip{font-size:10px; border-radius:7px; padding:2px 7px; font-weight:700; white-space:nowrap;}
+  .hint-chip.pref{color:#274d0a; background:#bfe08c;}
+  .hint-chip.void{color:var(--dim); background:#241a11; border:1px solid var(--line);}
+  /* 모루 위 무기 (중앙 주인공) */
+  #forgeCenter{flex:1 1 165px; min-height:150px; position:relative; display:flex; align-items:center; justify-content:center;}
+  #weaponBox{position:absolute; left:50%; top:47%; transform:translate(-50%,-58%); width:158px; height:114px; z-index:2;
+    filter:drop-shadow(0 4px 10px rgba(0,0,0,.55));}
+  #weaponBox.forge-hit{animation:weaponHit .42s cubic-bezier(.2,.8,.2,1);}
+  #weaponBox.missing{border:1px dashed var(--line); border-radius:8px; width:96px; height:64px;}
+  #reels{display:flex; gap:10px; justify-content:center; align-items:stretch;}
+  .reel-unit{flex:1 1 0; max-width:170px; text-align:center;}
+  .reel-cap{font-size:10px; color:var(--dim); margin-bottom:3px; letter-spacing:1px;}
+  .reel-window{position:relative; height:56px; overflow:hidden; border-radius:10px;
+    background:#0d0906; border:2px solid var(--line); box-shadow:inset 0 0 14px rgba(0,0,0,.8);}
+  .reel-window::before, .reel-window::after{content:""; position:absolute; left:0; right:0; height:14px; z-index:2; pointer-events:none;}
+  .reel-window::before{top:0; background:linear-gradient(#0d0906,transparent);}
+  .reel-window::after{bottom:0; background:linear-gradient(transparent,#0d0906);}
+  .reel-strip{display:flex; flex-direction:column; will-change:transform;}
+  .reel-item{height:56px; display:flex; align-items:center; justify-content:center; font-weight:800; font-size:18px;}
+  .reel-item.attr{font-size:15px; color:var(--txt);}
+  .reel-item.t-jackpot{color:var(--gold); text-shadow:0 0 10px var(--gold);}
+  .reel-item.t-great{color:var(--blue); text-shadow:0 0 8px var(--blue);}
+  .reel-item.t-normal{color:var(--white);}
+  .reel-item.t-bad{color:var(--grey);}
+  .reel-item.t-worst{color:var(--dark-red);}
+  .reel-sub{font-size:9px; opacity:.7; display:block; margin-top:-2px; font-weight:600;}
+  #anvilBox{position:absolute; left:50%; bottom:2px; transform:translateX(-50%); width:126px; height:58px; z-index:1; opacity:.95;}
+  #anvilBox.impact{animation:anvilImpact .34s ease-out;}
+  #anvilBox.missing::after{content:"⚒"; font-size:30px; opacity:.7;}
+  #hammerBox{position:absolute; left:50%; bottom:42px; margin-left:34px; width:58px; height:58px; transform-origin:bottom left; z-index:3;}
+  #hammerBox.missing::after{content:"🔨"; font-size:24px;}
+  #hammerBox.strike{animation:strike .42s cubic-bezier(.2,.9,.16,1);}
+  #forgeCenter.impact::after{content:""; position:absolute; left:50%; bottom:44px; width:20px; height:8px; border-radius:50%;
+    border:2px solid rgba(255,210,74,.7); transform:translateX(-50%) scale(.5); z-index:4; pointer-events:none;
+    animation:impactRing .42s ease-out forwards;}
+  @keyframes strike{0%{transform:rotate(-42deg) translate(-8px,-10px);}36%{transform:rotate(13deg) translate(3px,8px);}
+    54%{transform:rotate(-7deg) translate(-2px,-2px);}100%{transform:rotate(0) translate(0,0);}}
+  @keyframes anvilImpact{0%{filter:brightness(1);}35%{filter:brightness(1.65) drop-shadow(0 0 12px rgba(255,162,54,.9));}
+    100%{filter:brightness(1);}}
+  @keyframes weaponHit{0%{transform:translate(-50%,-58%) scale(1) rotate(0);}38%{transform:translate(-50%,-55%) scale(1.08) rotate(-1.5deg);}
+    100%{transform:translate(-50%,-58%) scale(1) rotate(0);}}
+  @keyframes impactRing{0%{opacity:0; transform:translateX(-50%) scale(.35);}30%{opacity:1;}
+    100%{opacity:0; transform:translateX(-50%) scale(5.4);}}
+
+  /* 4. 슬롯 트레이 */
+  #tray{display:flex; gap:6px; margin:4px 0;}
+  .slot{flex:1 1 0; min-height:54px; border-radius:8px; border:1.5px dashed var(--line);
+    background:rgba(13,9,6,.42); display:flex; flex-direction:column; align-items:center; justify-content:center;
+    padding:3px; text-align:center;}
+  .slot .s-tier{font-size:10px; font-weight:800; opacity:.9;}
+  .slot .s-attr{font-size:11px; font-weight:700; line-height:1.1; word-break:keep-all;}
+  .slot .s-note{font-size:9px; margin-top:2px; font-weight:900; opacity:.9;}
+  .slot.filled{border-style:solid;}
+  .slot.g-jackpot{border-color:var(--gold); background:rgba(255,210,74,.14); box-shadow:0 0 10px rgba(255,210,74,.3) inset;}
+  .slot.g-great{border-color:var(--blue); background:rgba(139,108,255,.14);}
+  .slot.g-normal{border-color:var(--white); background:rgba(238,241,245,.08);}
+  .slot.g-bad{border-color:var(--grey); background:rgba(138,138,138,.1);}
+  .slot.g-worst{border-color:var(--dark-red); background:rgba(192,57,43,.14);}
+  .slot.v-good .s-note{color:#7df59b;}
+  .slot.v-ok .s-note{color:#f0e6d6;}
+  .slot.v-bad .s-note{color:#b8a888;}
+  .slot.v-curse .s-note{color:#cda2ff;}
+  .slot.v-jackpot .s-note{color:var(--gold);}
+  .slot.pop{animation:pop .42s cubic-bezier(.16,.9,.2,1);}
+  @keyframes pop{0%{transform:translateY(-8px) scale(.58);opacity:0;}45%{transform:translateY(2px) scale(1.16);}
+    70%{transform:translateY(0) scale(.97);}100%{transform:translateY(0) scale(1);opacity:1;}}
+
+  /* 5. 상태바 */
+  #statusBar{display:flex; align-items:center; justify-content:space-between; font-size:12px; padding:3px 7px;
+    background:rgba(13,9,6,.8); border:1px solid rgba(90,70,48,.62); border-radius:8px;}
+  #hearts{font-size:20px; letter-spacing:2px;}
+  #hearts .full{color:#ff5b5b; text-shadow:0 0 6px rgba(255,91,91,.6);}
+  #hearts .empty{color:#5a4630;}
+  .stat-chip{font-weight:800;}
+  .stat-chip span{color:var(--dim); font-weight:600; font-size:11px;}
+  /* 콤보 칩 */
+  .stat-chip.combo{display:inline-flex; align-items:center; transition:transform .15s;}
+  .stat-chip.combo b{color:#ff8a3d; text-shadow:0 0 6px rgba(255,138,61,.55); white-space:nowrap;}
+  .stat-chip.combo.hot b{color:#ffd24a; text-shadow:0 0 9px rgba(255,210,74,.75);}
+  .stat-chip.combo.pulse{animation:comboPulse .42s ease;}
+  @keyframes comboPulse{0%{transform:scale(1);}40%{transform:scale(1.35);}100%{transform:scale(1);}}
+  .stat-chip.combo.break b{color:#7a6a55; text-shadow:none;}
+  .stat-chip.combo.break{animation:comboBreak .45s ease forwards;}
+  @keyframes comboBreak{0%{transform:scale(1.1) rotate(0);}30%{transform:scale(.9) rotate(-4deg);}100%{transform:scale(.7); opacity:0;}}
+
+  /* 6. 액션 버튼 */
+  #actions{display:flex; gap:8px; margin-top:6px;}
+  #decisionPanel{display:grid; grid-template-columns:auto 1fr; gap:2px 8px; align-items:center; min-height:40px;
+    border:1px solid var(--line); border-radius:8px; padding:6px 8px; background:rgba(13,9,6,.84); margin-top:3px;}
+  #decisionBadge{grid-row:1 / span 2; min-width:48px; text-align:center; border-radius:7px; padding:4px 6px;
+    font-size:11px; font-weight:900; color:#241a10; background:var(--gold);}
+  #decisionTitle{font-size:13px; line-height:1.2; color:#f7ead5;}
+  #decisionHint{font-size:11px; line-height:1.25; color:var(--dim); word-break:keep-all;}
+  #decisionPanel.v-good #decisionBadge{background:#7df59b;}
+  #decisionPanel.v-ok #decisionBadge{background:#f0e6d6;}
+  #decisionPanel.v-bad #decisionBadge{background:#9a8b78; color:#120d08;}
+  #decisionPanel.v-curse #decisionBadge{background:#b774ff; color:#fff;}
+  #decisionPanel.v-jackpot #decisionBadge{background:var(--gold); box-shadow:0 0 12px rgba(255,210,74,.45);}
+  #forgeBtn{flex:1 1 auto; font-size:17px; font-weight:800; color:#241a10; border:none; border-radius:12px;
+    padding:14px; background:linear-gradient(180deg,#ffd24a,#e0962e); box-shadow:0 4px 0 #9c5f17,0 6px 12px rgba(0,0,0,.4);
+    cursor:pointer; transition:transform .06s, filter .15s; letter-spacing:.5px;}
+  #forgeBtn:active{transform:translateY(3px); box-shadow:0 1px 0 #9c5f17;}
+  #forgeBtn:disabled{filter:grayscale(.6) brightness(.8); cursor:default;}
+  #rerollBtn{flex:0 0 auto; font-size:14px; font-weight:800; color:#fff; border:none; border-radius:12px;
+    padding:14px 14px; background:linear-gradient(180deg,#9b7cff,#5e44c8);
+    box-shadow:0 4px 0 #3d2c8a,0 6px 12px rgba(0,0,0,.4); cursor:pointer; transition:transform .06s, filter .15s; white-space:nowrap;}
+  #rerollBtn:active{transform:translateY(3px); box-shadow:0 1px 0 #3d2c8a;}
+  #rerollBtn:disabled{filter:grayscale(.6) brightness(.8); cursor:default;}
+  #muteBtn{flex:0 0 52px; font-size:20px; border:1px solid var(--line); border-radius:12px;
+    background:var(--panel2); color:var(--txt); cursor:pointer;}
+
+  /* FX 레이어 */
+  #fxLayer{position:absolute; inset:0; z-index:6; pointer-events:none; opacity:0;}
+  #fxLayer.fx-jackpot{animation:flashGold .8s ease-out; opacity:1;
+    background:radial-gradient(circle at 50% 42%,rgba(255,210,74,.55),transparent 60%);}
+  #fxLayer.fx-great{animation:flashBlue .7s ease-out; opacity:1;
+    background:radial-gradient(circle at 50% 42%,rgba(139,108,255,.45),transparent 62%);}
+  #fxLayer.fx-normal{animation:flashWhite .5s ease-out; opacity:1;
+    background:radial-gradient(circle at 50% 42%,rgba(255,255,255,.3),transparent 65%);}
+  #fxLayer.fx-bad{animation:smokeGrey .7s ease-out; opacity:1;
+    background:radial-gradient(circle at 50% 50%,rgba(120,120,120,.4),transparent 70%);}
+  #fxLayer.fx-worst{animation:flashDark .9s ease-out; opacity:1;
+    background:radial-gradient(circle at 50% 50%,rgba(120,10,10,.5),rgba(0,0,0,.7) 75%);}
+  @keyframes flashGold{0%{opacity:0;}25%{opacity:1;}100%{opacity:0;}}
+  @keyframes flashBlue{0%{opacity:0;}30%{opacity:.9;}100%{opacity:0;}}
+  @keyframes flashWhite{0%{opacity:0;}30%{opacity:.8;}100%{opacity:0;}}
+  @keyframes smokeGrey{0%{opacity:0;}40%{opacity:.8;}100%{opacity:0;}}
+  @keyframes flashDark{0%{opacity:0;}35%{opacity:1;}100%{opacity:0;}}
+
+  .shake-weak{animation:shake .35s;}
+  .shake-strong{animation:shakeS .5s;}
+  @keyframes shake{10%,90%{transform:translateX(-2px);}30%,70%{transform:translateX(3px);}50%{transform:translateX(-4px);}}
+  @keyframes shakeS{0%,100%{transform:translate(0,0);}15%{transform:translate(-6px,3px) rotate(-.4deg);}
+    35%{transform:translate(7px,-3px) rotate(.5deg);}55%{transform:translate(-7px,2px);}75%{transform:translate(5px,-2px);}}
+
+  .particle{position:absolute; z-index:7; width:9px; height:9px; border-radius:50%; pointer-events:none; top:42%; left:50%;}
+  .ember{position:absolute; z-index:7; width:5px; height:5px; border-radius:50%; pointer-events:none;
+    background:#ffd24a; box-shadow:0 0 8px #ff8a3d;}
+  #popText{position:absolute; z-index:8; left:50%; top:34%; transform:translate(-50%,-50%) scale(.4);
+    font-size:46px; font-weight:900; opacity:0; pointer-events:none; text-shadow:0 3px 10px rgba(0,0,0,.7);}
+  #popText.show{animation:popText 1s ease-out;}
+  @keyframes popText{0%{opacity:0;transform:translate(-50%,-50%) scale(.4) rotate(-8deg);}
+    25%{opacity:1;transform:translate(-50%,-50%) scale(1.15) rotate(3deg);}
+    70%{opacity:1;transform:translate(-50%,-60%) scale(1);}100%{opacity:0;transform:translate(-50%,-80%) scale(1);}}
+
+  /* 오버레이 (시작/결과) */
+  .overlay{position:absolute; inset:0; z-index:10; background:rgba(8,5,3,.92);
+    display:flex; flex-direction:column; align-items:center; justify-content:center; gap:14px; padding:28px; text-align:center;}
+  .overlay.hidden{display:none;}
+  .overlay h1{font-size:30px; margin:0; color:var(--gold); text-shadow:0 3px 0 #7a4a12,0 5px 14px rgba(0,0,0,.6); letter-spacing:2px;}
+  .overlay h2{font-size:20px; margin:0; color:var(--gold);}
+  .overlay p{font-size:13px; color:var(--dim); line-height:1.6; margin:0; max-width:340px; word-break:keep-all;}
+  .overlay .big-btn{font-size:18px; font-weight:800; color:#241a10; border:none; border-radius:12px; padding:14px 36px; margin-top:6px;
+    background:linear-gradient(180deg,#ffd24a,#e0962e); box-shadow:0 4px 0 #9c5f17,0 6px 12px rgba(0,0,0,.4); cursor:pointer;}
+  .overlay .big-btn:active{transform:translateY(3px);}
+  #resultStats{display:flex; flex-direction:column; gap:10px; width:100%; max-width:300px; margin:6px 0;}
+  .res-row{display:flex; justify-content:space-between; align-items:baseline; padding:10px 16px;
+    background:var(--panel2); border:1px solid var(--line); border-radius:10px;}
+  .res-row .label{font-size:13px; color:var(--dim);}
+  .res-row .val{font-size:22px; font-weight:800; color:var(--gold);}
+  .res-row.record{border-color:var(--gold); box-shadow:0 0 14px rgba(255,210,74,.35);}
+  .res-row .new-tag{font-size:10px; color:#241a10; background:var(--gold); border-radius:6px; padding:1px 6px; margin-left:6px; font-weight:800;}
+  .ico{display:inline-block; width:64px; height:64px; background-size:contain; background-repeat:no-repeat; background-position:center;}
+</style>
+</head>
+<body>
+<div id="app">
+  <div id="bgLayer"><img id="bgImg" alt=""></div>
+  <div id="fxLayer"></div>
+  <div id="popText"></div>
+
+  <div id="stage">
+    <!-- 1. 모험가 -->
+    <div id="advArea">
+      <div id="portraitWrap" class="imgbox" data-fb="모험가">
+        <img id="portrait" alt="">
+        <div id="badge" class="imgbox" data-fb=""><img id="badgeImg" alt=""></div>
+      </div>
+      <div id="advRight">
+        <div id="advName">—</div>
+        <div id="advMeta"></div>
+        <div id="bubble">대장간에 오신 것을 환영합니다.</div>
+      </div>
+    </div>
+    <div id="narration"></div>
+    <div id="requestPanel">
+      <div class="request-main"><span id="requestTitle">의뢰 대기 중</span><b id="requestGoal">목표 —</b></div>
+      <div class="request-sub" id="requestSub">손님이 오면 의뢰 조건이 표시됩니다.</div>
+    </div>
+
+    <!-- 2. 게이지 -->
+    <div id="gaugeWrap">
+      <div id="gaugeHead"><span>만족도</span><span>목표 <b id="goalText">—</b></span></div>
+      <div id="gaugeBar">
+        <div id="gaugeFill"></div>
+        <div id="goalMark"><div id="goalLabel"></div></div>
+        <div id="gaugePct">0%</div>
+      </div>
+    </div>
+
+    <!-- 3. 작업 영역 -->
+    <div id="workArea">
+      <!-- 취향 힌트 -->
+      <div id="hintRow"><span class="hint-label">✦ 선호</span></div>
+      <!-- 모루 위 무기 (중앙 주인공) -->
+      <div id="forgeCenter">
+        <div id="anvilBox" class="imgbox" data-fb=""><img id="anvilImg" alt=""></div>
+        <div id="weaponBox" class="imgbox" data-fb="무기"><img id="weaponImg" alt=""></div>
+        <div id="hammerBox" class="imgbox" data-fb=""><img id="hammerImg" alt=""></div>
+      </div>
+      <!-- 무기에 박히는 4슬롯 -->
+      <div id="tray"></div>
+      <!-- 릴 (작업 도구) -->
+      <div id="reels">
+        <div class="reel-unit">
+          <div class="reel-cap">티어</div>
+          <div class="reel-window" id="tierReel"><div class="reel-strip"><div class="reel-item">?</div></div></div>
+        </div>
+        <div class="reel-unit">
+          <div class="reel-cap">속성</div>
+          <div class="reel-window" id="attrReel"><div class="reel-strip"><div class="reel-item attr">?</div></div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 5. 상태바 -->
+    <div id="statusBar">
+      <div id="hearts"></div>
+      <div class="stat-chip combo" id="comboChip" style="display:none"><b id="comboVal">🔥0</b></div>
+      <div class="stat-chip"><span>리롤</span> <b id="rerollCount">0</b></div>
+      <div class="stat-chip"><span>만족</span> <b id="satCount">0</b></div>
+      <div class="stat-chip"><span>점수</span> <b id="score">0</b></div>
+    </div>
+
+    <!-- 6. 액션 -->
+    <div id="decisionPanel">
+      <span id="decisionBadge">대기</span>
+      <b id="decisionTitle">슬롯을 제련하세요</b>
+      <span id="decisionHint">결과를 보고 확정하거나 리롤할 수 있습니다.</span>
+    </div>
+    <div id="actions">
+      <button id="forgeBtn">제련하기 (1/4)</button>
+      <button id="rerollBtn" style="display:none">🔄 리롤 (0)</button>
+      <button id="muteBtn" title="음소거">🔊</button>
+    </div>
+  </div>
+
+  <!-- 시작 화면 -->
+  <div class="overlay" id="startScreen">
+    <h1>⚒️ 대장장이 키우기</h1>
+    <p>모험가가 들고 온 무기에 네 개의 슬롯을 박아 목표 만족도를 넘기세요.<br>슬롯 결과를 보고 손님마다 한 번, 마음에 안 드는 결과를 다시 굴릴 수 있습니다.</p>
+    <button class="big-btn" id="startBtn">시작하기</button>
+  </div>
+
+  <!-- 결과 화면 -->
+  <div class="overlay hidden" id="gameOverScreen">
+    <h2>게임 오버</h2>
+    <div id="resultStats"></div>
+    <button class="big-btn" id="retryBtn">다시 도전</button>
+  </div>
+</div>
+
+<script>
+"use strict";
+
+// ===================================================================
+// ===== LOGIC CORE START  (DOM 비의존 — §12 검증 시뮬과 공유) =========
+// ===================================================================
+
+// ===== 속성 풀 =====
+const ATTRS = {
+  물리: ["공격력","공격속도","정확도","방어구무시","치명피해","연속공격","출혈","처형","흡혈"],
+  주문: ["주문력","시전속도","마나","저항관통","원소피해","마나재생","주문연쇄","보호막","둔화"],
+  회복: ["치유량증가","저주해제","버프","재생","부활","신성","보호막부여","활력"],
+  공통: ["치명타","소켓","범위증가","내구도","쿨다운감소","이동속도","행운","경험치","반사"],
+  스탯: ["힘","민첩","지능","체력","정신력","전스탯"],
+  저주: ["불안정","폭주","흡정","균열"],
+};
+
+// ===== 직업 7종 =====
+const JOBS = {
+  기사:   { stat:["힘"],        special:"도발",       weapons:["한손검","양손검"] },
+  성기사: { stat:["힘","지능"],  special:"오라강화",   weapons:["한손검","메이스"] },
+  힐러:   { stat:["지능"],      special:"치유강화",   weapons:["메이스","지팡이"] },
+  마법사: { stat:["지능"],      special:"원소강화",   weapons:["지팡이","완드"] },
+  도적:   { stat:["민첩"],      special:"훔치기",     weapons:["단검"] },
+  레인저: { stat:["민첩","힘"],  special:"무조건명중", weapons:["활","장궁"] },
+  용병:   { stat:["힘","민첩"],  special:"꿰뚫기",     weapons:["양손검","양손해머"] },
+};
+
+// ===== 무기 9종 적합도 =====
+const WEAPON_AFFINITY = {
+  단검:     { 무효:["주문","회복"], 선호:["공격속도","치명타","치명피해","방어구무시","출혈","흡혈","연속공격"] },
+  한손검:   { 무효:["주문"],       선호:["공격력","정확도","치명타","신성","흡혈","반사"] },
+  양손검:   { 무효:["주문","회복"], 선호:["공격력","치명피해","처형","방어구무시","출혈","연속공격"] },
+  활:       { 무효:["주문","회복"], 선호:["정확도","공격속도","치명타","연속공격","출혈","이동속도"] },
+  장궁:     { 무효:["주문","회복"], 선호:["공격력","치명피해","방어구무시","처형","정확도","범위증가"] },
+  메이스:   { 무효:[],             선호:["공격력","신성","치유량증가","보호막부여","활력","정신력"] },
+  양손해머: { 무효:["주문","회복"], 선호:["공격력","방어구무시","처형","출혈","둔화","내구도"] },
+  지팡이:   { 무효:["물리"],       선호:["주문력","마나","시전속도","원소피해","주문연쇄","치유량증가","재생"] },
+  완드:     { 무효:["물리","회복"], 선호:["주문력","시전속도","마나재생","원소피해","주문연쇄","보호막","둔화"] },
+};
+
+// ===== 모험가 묘사 변수 =====
+const WEATHER = ["어느 날","화창한 날","비 오는 날","깜깜한 밤","안개 낀 날","눈 오는 날"];
+const MOOD    = ["느긋한","다급한","숨을 헐떡이는","고통에 찬","이상해 보이는","후드를 쓴","침착한","평범한"];
+const RACE    = ["인간 여성","인간 남성","드워프 여성","드워프 남성","엘프 여성","엘프 남성","다크엘프 여성","다크엘프 남성"];
+const DARK_MOODS = ["이상해 보이는","후드를 쓴"];
+const RACE_TRAIT = { 다크엘프:"은신" };
+
+// ===== 확률·가중치 (시뮬레이션 검증값) =====
+const TIER_PROB      = { T0:2, T1:6, T2:10, T3:13, T4:16, T5:16, T6:13, T7:10, T8:7, T9:4, T10:3 };
+const P_CURSE        = 0.05;
+const P_SOCKET_IN_T1 = 0.22;
+const PREF_WEIGHT    = 3;
+
+const TIER_WEIGHT = { T0:1.2, T1:1.0, T2:0.9, T3:0.8, T4:0.65, T5:0.55, T6:0.45, T7:0.3, T8:0.2, T9:0.1, T10:0.05 };
+const TIER_GRADE  = { T0:"초대박", T1:"초대박", T2:"대박", T3:"대박", T4:"중박", T5:"중박", T6:"중박", T7:"별로", T8:"별로", T9:"최악", T10:"최악" };
+
+const SATISFACTION_GOAL = { 초급:20, 중급:30, 고급:50, 특급:70 };
+const SPECIALS = Object.values(JOBS).map(j => j.special);
+
+const pick = (a) => a[Math.floor(Math.random() * a.length)];
+
+// ===== §3 모험가 생성 =====
+function spawnAdventurer(grade) {
+  const jobName = pick(Object.keys(JOBS));
+  const job = JOBS[jobName];
+  return {
+    weather: pick(WEATHER),
+    mood:    pick(MOOD),
+    race:    pick(RACE),
+    job:     jobName,
+    grade,
+    weapon:  pick(job.weapons),
+    goal:    SATISFACTION_GOAL[grade],
+  };
+}
+
+// ===== §4 제련 (슬롯 생성) =====
+function rollTier() {
+  const total = Object.values(TIER_PROB).reduce((a,b)=>a+b,0);
+  let r = Math.random()*total;
+  for (const [t,w] of Object.entries(TIER_PROB)) { r-=w; if (r<=0) return t; }
+  return "T10";
+}
+function validNormalAttrs(weapon) {
+  const aff = WEAPON_AFFINITY[weapon], out = [];
+  for (const cat of ["물리","주문","회복","공통","스탯"]) {
+    if (aff.무효.includes(cat)) continue;
+    for (const a of ATTRS[cat]) if (a !== "소켓") out.push(a);
+  }
+  return out;
+}
+function pickNormalAttr(weapon) {
+  const pool = validNormalAttrs(weapon), aff = WEAPON_AFFINITY[weapon];
+  const w = pool.map(a => aff.선호.includes(a) ? PREF_WEIGHT : 1);
+  let r = Math.random()*w.reduce((a,b)=>a+b,0);
+  for (let i=0;i<pool.length;i++){ r-=w[i]; if (r<=0) return pool[i]; }
+  return pool[pool.length-1];
+}
+function rollSlot(weapon, job, used) {
+  if (Math.random() < P_CURSE) {
+    const pool = ATTRS.저주.filter(c => !used.includes(c));
+    const attr = pool.length ? pick(pool) : pick(ATTRS.저주);
+    return { attr, tier: rollTier() };
+  }
+  const tier = rollTier();
+  if (tier === "T0") return { attr: JOBS[job].special, tier };
+  if (tier === "T1" && Math.random() < P_SOCKET_IN_T1 && !used.includes("소켓"))
+    return { attr: "소켓", tier };
+  let attr, guard = 0;
+  do { attr = pickNormalAttr(weapon); } while (used.includes(attr) && ++guard < 30);
+  return { attr, tier };
+}
+
+// ===== §5.1 만족도 공식 =====
+function weaponFit(attr, weapon) {
+  const aff = WEAPON_AFFINITY[weapon];
+  if (attr === "소켓") return 0.8;
+  if (aff.무효.some(c => ATTRS[c] && ATTRS[c].includes(attr))) return 0;
+  if (aff.선호.includes(attr)) return 1.0;
+  return 0.5;
+}
+function slotValue(attr, tier, weapon, job, mood) {
+  const J = JOBS[job];
+  if (ATTRS.저주.includes(attr)) {
+    if (!DARK_MOODS.includes(mood)) return 0;
+    return (1.0 + 0.4) * TIER_WEIGHT[tier];
+  }
+  if (SPECIALS.includes(attr) && J.special !== attr) return 0;
+  const own = (attr === J.special);
+  const fit = own ? 1.0 : weaponFit(attr, weapon);
+  if (fit === 0) return 0;
+  let bonus = 0;
+  if (["힘","민첩","지능"].includes(attr) && J.stat.includes(attr)) bonus += 0.3;
+  if (own && tier === "T0") bonus += 0.6;
+  return (fit + bonus) * TIER_WEIGHT[tier];
+}
+function satisfaction(slots, weapon, job, mood) {
+  const sum = slots.reduce((s,x)=> s + slotValue(x.attr, x.tier, weapon, job, mood), 0);
+  return Math.min(100, Math.round(sum / 4.0 * 100));
+}
+
+// 리액션 분기용: 티어가중치를 제외한 (적합도+보너스) 품질값. §6 분기 의도(선호/무효/기본)에 대응.
+function attrQuality(attr, tier, weapon, job, mood) {
+  const J = JOBS[job];
+  if (ATTRS.저주.includes(attr)) return DARK_MOODS.includes(mood) ? 1.4 : 0;
+  if (SPECIALS.includes(attr) && J.special !== attr) return 0;
+  const own = (attr === J.special);
+  const fit = own ? 1.0 : weaponFit(attr, weapon);
+  if (fit === 0) return 0;
+  let bonus = 0;
+  if (["힘","민첩","지능"].includes(attr) && J.stat.includes(attr)) bonus += 0.3;
+  if (own && tier === "T0") bonus += 0.6;
+  return fit + bonus;
+}
+
+// ===== §5.2 게임 모드 =====
+const LIVES = 3;
+const REROLLS_PER_CUSTOMER = 1;            // 손님 1명당 무료 리롤 횟수(튜닝 지점: 2면 숙련 천장↑·점수 약2배)
+const BASE  = { 초급:10, 중급:25, 고급:60, 특급:150 };
+function weighted(pairs) {
+  const total = pairs.reduce((s,p)=>s+p[1],0);
+  let r = Math.random()*total;
+  for (const [v,w] of pairs){ r-=w; if (r<=0) return v; }
+  return pairs[pairs.length-1][0];
+}
+function gradeByProgress(n) {
+  if (n < 5)  return weighted([["초급",60],["중급",40]]);
+  if (n < 10) return weighted([["초급",25],["중급",50],["고급",25]]);
+  if (n < 16) return weighted([["중급",40],["고급",45],["특급",15]]);
+  return weighted([["고급",45],["특급",55]]);
+}
+function newGame() { return { lives: LIVES, satisfied: 0, score: 0, streak: 0, over: false }; }
+function resolveCustomer(s, grade, sat) {
+  if (sat >= SATISFACTION_GOAL[grade]) {
+    s.satisfied++; s.streak++;
+    const mult = 1 + 0.1 * Math.min(s.streak, 10);
+    const over = Math.max(0, sat - SATISFACTION_GOAL[grade]) * 2;
+    const gained = Math.floor((BASE[grade] + over) * mult);
+    s.score += gained;
+    return { ok: true, gained, mult, streak: s.streak };
+  } else {
+    s.lives--; s.streak = 0;
+    if (s.lives <= 0) s.over = true;
+    return { ok: false, gained: 0, mult: 1, streak: 0 };
+  }
+}
+
+// ===================================================================
+// ===== LOGIC CORE END ==============================================
+// ===================================================================
+
+// ===== §7 대사 풀 =====
+const DIALOGUE = {
+  enter: {
+    느긋한: ["이 무기 좀 손봐주게","천천히 봐주게나"],
+    침착한: ["실력 있다는 소문 듣고 왔네","자네가 그 유명한 대장장이인가?"],
+    평범한: ["이 무기 좀 손봐주게","강화 부탁하네"],
+    다급한: ["빨리! 시간이 없어!","급하다, 서둘러주게!"],
+    "숨을 헐떡이는": ["헉헉… 어서 강화를!","쫓기기 전에 끝내야 해!"],
+    "고통에 찬": ["윽… 이 무기가 내 마지막 희망이야","쿨럭… 제발 서둘러…"],
+    "이상해 보이는": ["…….","내가 원하는 게 뭔지 알 텐데?"],
+    "후드를 쓴": ["흥미로운 손재주로군… 후훗","어둠을 두려워하지 않겠지?"],
+  },
+  tier: {
+    초대박: ["큰거 왔나!?","자넬 믿어보겠네","제발 좋은거..","오오, 이건 빛부터 다르잖아!","이런 명품이 내 손에…!","심장이 떨리는군. 이거다!","역시 이 바닥 최고야!","전설로 남을 물건이 되겠어","내 평생 이런 건 처음 봐","신의 손길이 깃들었군"],
+    대박: ["역시 믿었다구","좋은거 부탁드립니다. 선생님","오, 제법인데?","이 정도면 훌륭하지","솜씨가 살아있구만","기대 이상이야","흠, 마음에 드는군","값은 톡톡히 하겠어","맡기길 잘했어","이거라면 싸울 맛 나겠어"],
+    중박: ["그저그런 대장장이구만","길거리에 널린 평범한 대장장이놈","뭐… 나쁘진 않네","그럭저럭이군","특별할 건 없구만","이걸로 만족해야 하나?","흠… 무난하군","딱 값어치만큼이네","감흥은 없지만 쓸 만은 해","기대도 안 했다만"],
+    별로: ["망치는 잡아본적이 있냐?","망치가 뭔줄 알기나 아냐?","이게 최선이야? 진심으로?","허… 시간 낭비였군","돈이 아깝다 아까워","견습생이 만든 줄 알았네","이런 걸 물건이라고…","실력이 영 녹슬었구만","내 무기가 운다, 울어","다른 대장간을 찾아야 하나"],
+    최악: ["쓸모없는 놈이구나","찢어죽일 놈","후회하게 만들어주마","이 사기꾼 같으니!","내 무기를 망쳐놨어!","당장 물어내라!","두 번 다시 오나 봐라","이딴 게 대장장이라고?","차라리 돌멩이가 낫겠다","네놈 솜씨에 치가 떨린다"],
+  },
+  attr: {
+    적중: ["그래, 바로 이거야!","내가 원하던 속성이군!","완벽해, 완벽하다고!","이거면 충분해!","역시 통하는군!","내 무기에 딱이야","이런 옵션을 노렸지","오, 제대로 박혔어!"],
+    무난: ["뭐, 없는 것보단 낫지","쓸 데가 있으려나","나쁘진 않군","그럭저럭 쓰겠어","흠, 이것도 받아두지","아쉽지만 넘어가지"],
+    빗나감: ["이게 나한테 무슨 소용이야","쯧… 헛수고군","(깊은 한숨)","내 무기엔 안 맞잖아!","(말없이 고개를 젓는다)","이런 걸 누가 쓰라고","버리는 슬롯이군","허탈하구만…"],
+    저주_환희: ["크큭… 바로 이 어둠이야","금지된 힘이라… 좋아","이거다. 내가 찾던 저주!","위험할수록 끌리는 법이지","어둠이 날 선택했군"],
+    저주_경악: ["이… 이건 저주받은 물건이잖아!","당장 치워! 불길해","사악한 기운이… 싫어!","이런 걸 내게 주려는 건가?","(겁에 질려 물러선다)"],
+  },
+  result: {
+    만족: ["훌륭하군. 값은 후하게 쳐주지","이거면 됐어. 고맙네","자네 이름을 기억해두겠어","또 오겠네, 대장장이","이제야 싸울 맛 나는군","명성이 헛되지 않았어","친구들에게도 알리지","만족스럽군. 떠나겠네"],
+    불만족: ["실망이군. 두 번 다시 안 와","이런 곳에 시간을 버리다니","네 명성도 여기까지군","다신 자네에게 맡기지 않겠어","최악이야. 소문내고 다니지","이게 끝이야? 한심하군","내 기대를 저버렸어","이 대장간은 곧 망할 거야"],
+  },
+  jobEnter: {
+    기사:"기사의 검에 부끄럽지 않게 해주게", 성기사:"신의 가호가 이 무기에 깃들기를",
+    힐러:"누군가를 지킬 도구라네. 정성껏 부탁하네", 마법사:"마력을 견딜 물건이어야 하네",
+    도적:"조용하고, 날카롭게… 알지?", 레인저:"백 보 밖을 꿰뚫을 물건으로", 용병:"돈값만 하면 된다. 잔말 말고",
+  },
+};
+const line = (arr) => arr[Math.floor(Math.random()*arr.length)];
+
+// ===== §8 에셋 매핑 =====
+const WEAPON_FILE = {단검:"dagger",한손검:"sword_1h",양손검:"sword_2h",활:"bow",장궁:"longbow",메이스:"mace",양손해머:"hammer_2h",지팡이:"staff",완드:"wand"};
+const JOB_FILE    = {기사:"knight",성기사:"paladin",힐러:"healer",마법사:"mage",도적:"rogue",레인저:"ranger",용병:"mercenary"};
+const BADGE_FILE  = {초급:"badge_bronze",중급:"badge_silver",고급:"badge_gold",특급:"badge_diamond"};
+const BG_FILE     = {"어느 날":"forge","화창한 날":"forge","비 오는 날":"forge_rain","깜깜한 밤":"forge_night","안개 낀 날":"forge_fog","눈 오는 날":"forge_snow"};
+const GRADE_CLASS = {초대박:"jackpot",대박:"great",중박:"normal",별로:"bad",최악:"worst"};
+const ALL_TIERS   = Object.keys(TIER_PROB);
+const ALL_ATTRS_DISPLAY = [].concat.apply([], Object.values(ATTRS)).concat(SPECIALS);
+const QUERY = typeof URLSearchParams !== "undefined" && typeof location !== "undefined"
+  ? new URLSearchParams(location.search)
+  : null;
+const PREVIEW_V2  = QUERY ? QUERY.get("preview") === "v2" : false;
+const USE_V2_ASSETS = QUERY ? QUERY.get("assets") !== "old" : true;
+const ASSET_VERSION = "20260619-v4";
+
+// ===== 한국어 조사 처리 =====
+function hasJong(str){
+  const c = str.charCodeAt(str.length-1);
+  if (c < 0xAC00 || c > 0xD7A3) return false;
+  return (c - 0xAC00) % 28 !== 0;
+}
+const josa = (w, withJ, woJ) => w + (hasJong(w) ? withJ : woJ);
+function entranceSentence(a){
+  return `${a.weather}, 대장간으로 ${a.mood} 모습의 ${a.race} ${josa(a.job,"이","가")} ${a.grade} ${josa(a.weapon,"을","를")} 들고 찾아왔습니다.`;
+}
+
+// ===== DOM 헬퍼 =====
+const el = (id) => document.getElementById(id);
+const sleep = (ms) => new Promise(r => setTimeout(r, ms));
+function applyImg(box, src, fb){
+  box.dataset.fb = fb || "";
+  box.classList.remove("missing");
+  const img = box.querySelector("img");
+  if(!img){ box.classList.add("missing"); return; }
+  img.onerror = () => box.classList.add("missing");
+  img.onload  = () => box.classList.remove("missing");
+  img.src = src;
+}
+const versionedAsset = (dir, name) => `assets/${dir}/${name}${USE_V2_ASSETS ? "_v2" : ""}.webp?v=${ASSET_VERSION}`;
+
+// ===== 사운드 (Web Audio, 파일 없이 합성) =====
+let audioCtx = null, muted = false;
+function ac(){ if(!audioCtx){ try{ audioCtx = new (window.AudioContext||window.webkitAudioContext)(); }catch(e){ audioCtx=null; } } return audioCtx; }
+function tone(freq, dur, type, vol, when){
+  if(muted) return; const c = ac(); if(!c) return;
+  const o = c.createOscillator(), g = c.createGain();
+  o.type = type||"sine"; o.frequency.value = freq;
+  o.connect(g); g.connect(c.destination);
+  const t = c.currentTime + (when||0);
+  g.gain.setValueAtTime(0.0001, t);
+  g.gain.exponentialRampToValueAtTime(vol||0.12, t+0.012);
+  g.gain.exponentialRampToValueAtTime(0.0001, t+dur);
+  o.start(t); o.stop(t+dur+0.02);
+}
+function sfxSpin(){ tone(160,0.18,"sawtooth",0.05); tone(240,0.18,"square",0.03,0.02); }
+function sfxTier(grade){
+  if(grade==="초대박"){ [523,659,784,1047].forEach((f,i)=>tone(f,0.22,"triangle",0.12,i*0.07)); }
+  else if(grade==="대박"){ tone(523,0.16,"triangle",0.11); tone(784,0.2,"triangle",0.1,0.09); }
+  else if(grade==="중박"){ tone(440,0.14,"sine",0.09); }
+  else if(grade==="별로"){ tone(200,0.18,"sine",0.08); }
+  else { tone(110,0.32,"sawtooth",0.12); tone(98,0.32,"square",0.06,0.02); }
+}
+function sfxAttr(q){
+  if(q>=1.0) tone(880,0.16,"triangle",0.1);
+  else if(q===0) tone(150,0.2,"sawtooth",0.08);
+  else tone(523,0.12,"sine",0.08);
+}
+function sfxResult(ok){
+  if(ok){ [523,659,784,1047,1319].forEach((f,i)=>tone(f,0.3,"triangle",0.12,i*0.1)); }
+  else { [392,330,262,196].forEach((f,i)=>tone(f,0.35,"sawtooth",0.1,i*0.13)); }
+}
+function sfxForgeHit(grade){
+  tone(190,0.08,"square",0.1);
+  tone(92,0.11,"sawtooth",0.08,0.015);
+  if(grade==="초대박" || grade==="대박") tone(880,0.14,"triangle",0.08,0.05);
+}
+
+// ===== 연출 효과 =====
+function shake(kind){
+  const s = el("stage");
+  s.classList.remove("shake-weak","shake-strong");
+  void s.offsetWidth;
+  s.classList.add(kind==="strong"?"shake-strong":"shake-weak");
+  setTimeout(()=>s.classList.remove("shake-weak","shake-strong"), 600);
+}
+function spawnParticles(color, n){
+  const app = el("app");
+  for(let i=0;i<n;i++){
+    const p = document.createElement("div");
+    p.className = "particle";
+    p.style.background = color==="gold" ? "#ffd24a" : "#9b7cff";
+    p.style.boxShadow = "0 0 8px "+(color==="gold"?"#ffd24a":"#9b7cff");
+    app.appendChild(p);
+    const ang = Math.random()*Math.PI*2, dist = 80+Math.random()*150;
+    const dx = Math.cos(ang)*dist, dy = Math.sin(ang)*dist - 40;
+    p.animate([
+      {transform:"translate(0,0) scale(1)", opacity:1},
+      {transform:`translate(${dx}px,${dy}px) scale(.2)`, opacity:0}
+    ], {duration:700+Math.random()*400, easing:"cubic-bezier(.2,.7,.3,1)"});
+    setTimeout(()=>p.remove(), 1200);
+  }
+}
+function spawnForgeSparks(grade){
+  const center = el("forgeCenter");
+  const colors = grade==="초대박" ? ["#ffd24a","#fff0a6","#ff8a3d"] :
+    grade==="대박" ? ["#9b7cff","#ffd24a","#f6f0ff"] :
+    grade==="최악" ? ["#c0392b","#1b1010","#ff8a3d"] :
+    ["#ffd24a","#ff8a3d","#f6c26b"];
+  const count = grade==="초대박" ? 18 : grade==="대박" ? 13 : 10;
+  for(let i=0;i<count;i++){
+    const p = document.createElement("div");
+    p.className = "ember";
+    const color = pick(colors);
+    p.style.left = "50%";
+    p.style.top = "58%";
+    p.style.background = color;
+    p.style.boxShadow = `0 0 9px ${color}`;
+    center.appendChild(p);
+    const ang = (-Math.PI * .95) + Math.random() * (Math.PI * .9);
+    const dist = 34 + Math.random() * 72;
+    const dx = Math.cos(ang) * dist;
+    const dy = Math.sin(ang) * dist - Math.random() * 24;
+    p.animate([
+      {transform:"translate(-50%,-50%) scale(1)", opacity:1},
+      {transform:`translate(calc(-50% + ${dx}px), calc(-50% + ${dy}px)) scale(.18)`, opacity:0}
+    ], {duration:420+Math.random()*260, easing:"cubic-bezier(.12,.7,.3,1)"});
+    setTimeout(()=>p.remove(), 760);
+  }
+}
+function forgeImpact(grade){
+  const hammer = el("hammerBox");
+  const anvil = el("anvilBox");
+  const weapon = el("weaponBox");
+  const center = el("forgeCenter");
+  [hammer, anvil, weapon, center].forEach(x => x && x.classList.remove("strike","impact","forge-hit"));
+  void center.offsetWidth;
+  hammer.classList.add("strike");
+  anvil.classList.add("impact");
+  weapon.classList.add("forge-hit");
+  center.classList.add("impact");
+  spawnForgeSparks(grade);
+  sfxForgeHit(grade);
+  setTimeout(()=>center.classList.remove("impact"), 520);
+}
+function popText(txt, color){
+  const p = el("popText");
+  p.textContent = txt;
+  p.style.color = color==="gold" ? "#ffd24a" : "#fff";
+  p.classList.remove("show"); void p.offsetWidth; p.classList.add("show");
+}
+function gradeEffect(grade){
+  const fx = el("fxLayer");
+  fx.className = ""; void fx.offsetWidth;
+  fx.className = "fx-"+GRADE_CLASS[grade];
+  setTimeout(()=>{ fx.className=""; }, 900);
+  if(grade==="초대박"){ shake("strong"); spawnParticles("gold",20); popText("잭팟!","gold"); }
+  else if(grade==="대박"){ shake("weak"); spawnParticles("blue",12); }
+  else if(grade==="최악"){ shake("weak"); }
+  sfxTier(grade);
+}
+
+// ===== 릴 스핀 =====
+function tierItemHTML(t){
+  const g = GRADE_CLASS[TIER_GRADE[t]];
+  return `<div class="reel-item t-${g}">${t}<span class="reel-sub">${TIER_GRADE[t]}</span></div>`;
+}
+function attrItemHTML(a){ return `<div class="reel-item attr">${a}</div>`; }
+async function spinReel(windowEl, pool, finalVal, dur, isTier){
+  const items = [];
+  const N = 22;
+  for(let i=0;i<N;i++) items.push(pick(pool));
+  items.push(finalVal);
+  const strip = document.createElement("div");
+  strip.className = "reel-strip";
+  strip.innerHTML = items.map(isTier ? tierItemHTML : attrItemHTML).join("");
+  windowEl.innerHTML = "";
+  windowEl.appendChild(strip);
+  const itemH = strip.children[0].offsetHeight || 56;
+  const total = items.length;
+  strip.style.transition = "none";
+  strip.style.transform = "translateY(0)";
+  void strip.offsetHeight;
+  sfxSpin();
+  await sleep(30);
+  strip.style.transition = `transform ${dur}ms cubic-bezier(.12,.62,.2,1)`;
+  strip.style.transform = `translateY(${-(total-1)*itemH}px)`;
+  await sleep(dur + 60);
+}
+
+// ===== 게임 상태 / UI =====
+let state = newGame();
+let cur = null;   // {adv, slots[], grade, revealed, vals[]}
+let busy = false;
+let previewCustomerIndex = 0;
+
+function renderHearts(){
+  let h = "";
+  for(let i=0;i<LIVES;i++) h += (i < state.lives) ? '<span class="full">♥</span>' : '<span class="empty">♡</span>';
+  el("hearts").innerHTML = h;
+}
+function renderStatus(){
+  renderHearts();
+  el("satCount").textContent = state.satisfied;
+  el("score").textContent = state.score;
+  renderCombo();
+}
+// 콤보(연속 성공)와 현재 점수 배수를 노출. streak 0이면 숨김.
+function renderCombo(){
+  const chip = el("comboChip");
+  const s = state.streak;
+  if(s > 0){
+    const mult = (1 + 0.1 * Math.min(s, 10)).toFixed(1);
+    el("comboVal").textContent = `🔥${s} ×${mult}`;
+    chip.classList.toggle("hot", s >= 5);   // 5콤보부터 금색 강조
+    chip.classList.remove("break");
+    chip.style.display = "";
+  } else {
+    chip.style.display = "none";
+    chip.classList.remove("hot");
+  }
+}
+function say(txt){
+  const b = el("bubble");
+  b.style.opacity = 0;
+  setTimeout(()=>{ b.textContent = txt; b.style.opacity = 1; }, 120);
+}
+function setGoalMarker(goal){
+  el("goalText").textContent = goal + "%";
+  el("goalMark").style.left = goal + "%";
+  el("goalLabel").textContent = goal;
+}
+function updateGauge(pct, win){
+  const bar = el("gaugeBar");
+  el("gaugeFill").style.width = Math.min(100,pct) + "%";
+  el("gaugePct").textContent = pct + "%";
+  el("gaugeFill").classList.toggle("win", !!win);
+  bar.classList.remove("pulse"); void bar.offsetWidth; bar.classList.add("pulse");
+}
+function buildTray(){
+  const tray = el("tray"); tray.innerHTML = "";
+  for(let i=0;i<4;i++){
+    const d = document.createElement("div");
+    d.className = "slot"; d.id = "slot"+i;
+    d.innerHTML = '<div class="s-tier">·</div><div class="s-attr">—</div>';
+    tray.appendChild(d);
+  }
+}
+function commitSlot(i, slot){
+  const grade = TIER_GRADE[slot.tier];
+  const verdict = slotVerdict(slot);
+  const d = el("slot"+i);
+  d.className = "slot filled g-"+GRADE_CLASS[grade];
+  d.classList.add(verdict.cls);
+  d.innerHTML = `<div class="s-tier">${slot.tier}</div><div class="s-attr">${slot.attr}</div><div class="s-note">${verdict.label}</div>`;
+  d.classList.add("pop");
+  forgeImpact(grade);
+}
+
+function nextCustomer(){
+  const grade = gradeByProgress(state.satisfied);
+  const adv = spawnAdventurer(grade);
+  if(PREVIEW_V2){
+    const previewJobs = ["기사","성기사","마법사","도적","레인저","힐러","용병"];
+    const jobName = previewJobs[previewCustomerIndex % previewJobs.length];
+    const job = JOBS[jobName];
+    previewCustomerIndex++;
+    Object.assign(adv, {
+      weather: "어느 날",
+      mood: "침착한",
+      race: "인간 남성",
+      job: jobName,
+      grade: "중급",
+      weapon: job.weapons[0],
+      goal: SATISFACTION_GOAL.중급,
+    });
+  }
+  const used = [], slots = [];
+  for(let i=0;i<4;i++){ const s = rollSlot(adv.weapon, adv.job, used); used.push(s.attr); slots.push(s); }
+  cur = { adv, slots, grade, revealed:0, vals:[], rerollsLeft: REROLLS_PER_CUSTOMER };
+
+  // 배경
+  applyImg(el("bgLayer"), `assets/bg/${BG_FILE[adv.weather]}.webp`, "");
+  // 초상화 / 뱃지 / 무기
+  applyImg(el("portraitWrap"), versionedAsset("portraits", JOB_FILE[adv.job]), adv.job);
+  applyImg(el("badge"), versionedAsset("ui", BADGE_FILE[adv.grade]), adv.grade);
+  applyImg(el("weaponBox"), versionedAsset("weapons", WEAPON_FILE[adv.weapon]), adv.weapon);
+  applyImg(el("anvilBox"), versionedAsset("ui", "anvil"), "");
+  applyImg(el("hammerBox"), versionedAsset("ui", "hammer"), "");
+
+  const trait = RACE_TRAIT[adv.race.replace(/ (여성|남성)$/,"")];
+  el("advName").innerHTML = `${adv.race} ${adv.job}<span class="grade">${adv.grade}</span>`;
+  el("advMeta").textContent = `${adv.mood} · ${adv.weapon}` + (trait ? ` · 특성:${trait}` : "");
+  el("narration").textContent = entranceSentence(adv);
+  say(Math.random()<0.5 ? line(DIALOGUE.enter[adv.mood]) : DIALOGUE.jobEnter[adv.job]);
+
+  renderHint(adv.weapon);
+  setGoalMarker(adv.goal);
+  updateGauge(0, false);
+  buildTray();
+  renderRequestPanel();
+  updateDecisionPanel(null);
+  // 릴 초기화
+  el("tierReel").innerHTML = '<div class="reel-strip"><div class="reel-item">?</div></div>';
+  el("attrReel").innerHTML = '<div class="reel-strip"><div class="reel-item attr">?</div></div>';
+
+  const btn = el("forgeBtn");
+  btn.textContent = "제련하기 (1/4)";
+  btn.disabled = false;
+  btn.onclick = forgeNext;
+  el("rerollBtn").style.display = "none";
+  updateRerollIndicator();
+  renderStatus();
+}
+
+function updateRerollIndicator(){
+  el("rerollCount").textContent = cur ? cur.rerollsLeft : 0;
+  renderRequestPanel();
+}
+
+// 무기 취향 힌트: 선호 속성(최대 5) + 무효 카테고리 표시 (WEAPON_AFFINITY 기반)
+function renderHint(weapon){
+  const aff = WEAPON_AFFINITY[weapon];
+  const row = el("hintRow");
+  row.innerHTML = '<span class="hint-label">✦ 선호</span>';
+  aff.선호.slice(0, 5).forEach(a => {
+    const c = document.createElement("span");
+    c.className = "hint-chip pref"; c.textContent = a;
+    row.appendChild(c);
+  });
+  aff.무효.forEach(cat => {
+    const c = document.createElement("span");
+    c.className = "hint-chip void"; c.textContent = cat + " 무효";
+    row.appendChild(c);
+  });
+}
+
+function partialPct(){
+  const sum = cur.vals.reduce((s,v)=> s + (v||0), 0);
+  return Math.min(100, Math.round(sum / 4.0 * 100));
+}
+
+function slotVerdict(slot){
+  const q = attrQuality(slot.attr, slot.tier, cur.adv.weapon, cur.adv.job, cur.adv.mood);
+  const grade = TIER_GRADE[slot.tier];
+  if(grade === "초대박") return { cls:"v-jackpot", label:"대박", title:"놓치기 아까운 슬롯", hint:"높은 티어입니다. 보통은 확정하는 쪽이 좋습니다." };
+  if(ATTRS.저주.includes(slot.attr)){
+    return DARK_MOODS.includes(cur.adv.mood)
+      ? { cls:"v-curse", label:"저주+", title:"이 손님은 저주를 반깁니다", hint:"어둠 성향 손님에게는 강한 선택입니다." }
+      : { cls:"v-curse", label:"저주", title:"대부분 손님에게 위험한 슬롯", hint:"리롤이 남았다면 다시 굴릴 만합니다." };
+  }
+  if(q >= 1.0) return { cls:"v-good", label:"적중", title:"무기와 손님에게 잘 맞습니다", hint:"목표 만족도에 크게 기여합니다." };
+  if(q === 0) return { cls:"v-bad", label:"빗나감", title:"만족도에 기여하지 않습니다", hint:"리롤을 쓰기 좋은 후보입니다." };
+  return { cls:"v-ok", label:"무난", title:"쓸 수는 있는 슬롯", hint:"목표까지 여유가 없다면 리롤을 고민하세요." };
+}
+
+function renderRequestPanel(){
+  if(!cur){
+    el("requestTitle").textContent = "의뢰 대기 중";
+    el("requestGoal").textContent = "목표 —";
+    el("requestSub").textContent = "손님이 오면 의뢰 조건이 표시됩니다.";
+    return;
+  }
+  const a = cur.adv;
+  const pct = partialPct();
+  const gap = Math.max(0, a.goal - pct);
+  el("requestTitle").textContent = `${a.grade} ${a.weapon} · ${a.job}`;
+  el("requestGoal").textContent = `목표 ${a.goal}%`;
+  el("requestSub").textContent = cur.revealed === 0 && cur.vals.length === 0
+    ? "선호 속성과 무효 카테고리를 보고 첫 슬롯을 제련하세요."
+    : `현재 ${pct}% · 목표까지 ${gap}% 남음 · 리롤 ${cur.rerollsLeft}회`;
+}
+
+function updateDecisionPanel(slot){
+  const panel = el("decisionPanel");
+  panel.className = "";
+  if(!slot){
+    el("decisionBadge").textContent = "대기";
+    el("decisionTitle").textContent = "슬롯을 제련하세요";
+    el("decisionHint").textContent = "결과를 보고 확정하거나 리롤할 수 있습니다.";
+    return;
+  }
+  const v = slotVerdict(slot);
+  panel.classList.add(v.cls);
+  el("decisionBadge").textContent = v.label;
+  el("decisionTitle").textContent = v.title;
+  el("decisionHint").textContent = `${v.hint} 현재 리롤 ${cur.rerollsLeft}회.`;
+}
+
+// 슬롯 i 공개 연출(최초 제련 / 리롤 공용). i는 결정 대기 중인 현재 슬롯.
+async function doReveal(i){
+  busy = true;
+  el("forgeBtn").disabled = true;
+  el("rerollBtn").disabled = true;
+  const slot = cur.slots[i];
+  const grade = TIER_GRADE[slot.tier];
+
+  // 1~2: 티어 릴 → 확정 + 리액션
+  await spinReel(el("tierReel"), ALL_TIERS, slot.tier, 1150, true);
+  gradeEffect(grade);
+  say(line(DIALOGUE.tier[grade]));
+  // 3: 정적
+  await sleep(450);
+  // 4~5: 속성 릴 → 확정 + 리액션
+  await spinReel(el("attrReel"), ALL_ATTRS_DISPLAY, slot.attr, 1000, false);
+  const q = attrQuality(slot.attr, slot.tier, cur.adv.weapon, cur.adv.job, cur.adv.mood);
+  let react;
+  if(ATTRS.저주.includes(slot.attr)) react = DARK_MOODS.includes(cur.adv.mood) ? DIALOGUE.attr.저주_환희 : DIALOGUE.attr.저주_경악;
+  else if(q >= 1.0) react = DIALOGUE.attr.적중;
+  else if(q === 0)  react = DIALOGUE.attr.빗나감;
+  else              react = DIALOGUE.attr.무난;
+  sfxAttr(q);
+  say(line(react));
+  // 6: 슬롯 박힘 + 게이지(현재까지 부분 만족도)
+  cur.vals[i] = slotValue(slot.attr, slot.tier, cur.adv.weapon, cur.adv.job, cur.adv.mood);
+  commitSlot(i, slot);
+  await sleep(250);
+  updateGauge(partialPct(), false);
+  renderRequestPanel();
+  updateDecisionPanel(slot);
+
+  busy = false;
+  showDecision();
+}
+
+// 슬롯이 공개된 뒤, 리롤/확정 중 선택하도록 버튼 구성
+function showDecision(){
+  const i = cur.revealed;
+  const last = (i >= 3);
+  const forge = el("forgeBtn");
+  forge.textContent = last ? "결과 확정 ▶" : "다음 슬롯 ▶";
+  forge.disabled = false;
+  forge.onclick = advanceSlot;
+
+  const rb = el("rerollBtn");
+  if(cur.rerollsLeft > 0){
+    rb.style.display = "";
+    rb.disabled = false;
+    rb.textContent = `🔄 리롤 (${cur.rerollsLeft})`;
+    rb.onclick = rerollCurrent;
+  } else {
+    rb.style.display = "none";
+  }
+  updateRerollIndicator();
+}
+
+// 최초 제련: 현재 슬롯을 공개
+async function forgeNext(){
+  if(busy || !cur || cur.revealed >= 4) return;
+  await doReveal(cur.revealed);
+}
+
+// 리롤: 현재 슬롯만 다시 굴려 재공개(다른 슬롯 속성과 중복 금지 유지)
+async function rerollCurrent(){
+  if(busy || !cur || cur.rerollsLeft <= 0 || cur.revealed >= 4) return;
+  const i = cur.revealed;
+  const used = cur.slots.filter((_, j) => j !== i).map(s => s.attr);
+  cur.slots[i] = rollSlot(cur.adv.weapon, cur.adv.job, used);
+  cur.rerollsLeft--;
+  updateRerollIndicator();
+  await doReveal(i);
+}
+
+// 확정: 현재 슬롯을 굳히고 다음 슬롯으로(마지막이면 최종 판정)
+async function advanceSlot(){
+  if(busy || !cur) return;
+  el("rerollBtn").style.display = "none";
+  cur.revealed++;
+  if(cur.revealed >= 4){
+    el("forgeBtn").disabled = true;
+    await sleep(450);
+    finalize();
+  } else {
+    const btn = el("forgeBtn");
+    btn.textContent = `제련하기 (${cur.revealed+1}/4)`;
+    btn.disabled = false;
+    btn.onclick = forgeNext;
+    updateDecisionPanel(null);
+  }
+}
+
+function finalize(){
+  const a = cur.adv;
+  const sat = satisfaction(cur.slots, a.weapon, a.job, a.mood);
+  const goal = SATISFACTION_GOAL[a.grade];
+  const ok = sat >= goal;
+  updateGauge(sat, ok);
+  const prevStreak = state.streak;
+  const res = resolveCustomer(state, a.grade, sat);
+  renderStatus();
+
+  const chip = el("comboChip");
+  if(ok){
+    popText(`성공! ×${res.mult.toFixed(1)}`, "gold");
+    chip.classList.remove("pulse"); void chip.offsetWidth; chip.classList.add("pulse");  // 콤보 칩 강조
+  } else if(prevStreak >= 2){
+    // 콤보 끊김: 칩을 다시 띄워 깨지는 연출
+    chip.style.display = ""; el("comboVal").textContent = `🔥${prevStreak} 끊김!`;
+    chip.classList.remove("hot","pulse"); void chip.offsetWidth; chip.classList.add("break");
+  }
+  say(line(ok ? DIALOGUE.result.만족 : DIALOGUE.result.불만족));
+  sfxResult(ok);
+  if(!ok) shake("weak");
+
+  const btn = el("forgeBtn");
+  if(state.over){
+    btn.textContent = "결과 보기";
+    btn.disabled = false;
+    btn.onclick = showGameOver;
+  } else {
+    btn.textContent = "다음 손님 ▶";
+    btn.disabled = false;
+    btn.onclick = nextCustomer;
+  }
+}
+
+// ===== §10 결과 화면 =====
+function showGameOver(){
+  const bestCount = Number(localStorage.getItem("bestCount") || 0);
+  const bestScore = Number(localStorage.getItem("bestScore") || 0);
+  const newCount = state.satisfied > bestCount;
+  const newScore = state.score > bestScore;
+  if(newCount) localStorage.setItem("bestCount", state.satisfied);
+  if(newScore) localStorage.setItem("bestScore", state.score);
+
+  el("resultStats").innerHTML = `
+    <div class="res-row ${newCount?'record':''}"><span class="label">만족시킨 모험가</span>
+      <span class="val">${state.satisfied}명${newCount?'<span class="new-tag">신기록</span>':''}</span></div>
+    <div class="res-row ${newScore?'record':''}"><span class="label">최종 점수</span>
+      <span class="val">${state.score}${newScore?'<span class="new-tag">신기록</span>':''}</span></div>
+    <div class="res-row"><span class="label">최고 기록</span>
+      <span class="val" style="font-size:15px">${Math.max(bestCount,state.satisfied)}명 / ${Math.max(bestScore,state.score)}점</span></div>`;
+  el("gameOverScreen").classList.remove("hidden");
+}
+
+function startGame(){
+  ac(); if(audioCtx && audioCtx.state === "suspended") audioCtx.resume();
+  state = newGame();
+  previewCustomerIndex = 0;
+  el("startScreen").classList.add("hidden");
+  el("gameOverScreen").classList.add("hidden");
+  nextCustomer();
+}
+
+// ===== 이벤트 바인딩 =====
+el("startBtn").onclick = startGame;
+el("retryBtn").onclick = startGame;
+el("muteBtn").onclick = function(){
+  muted = !muted;
+  this.textContent = muted ? "🔇" : "🔊";
+  if(!muted){ ac(); if(audioCtx && audioCtx.state==="suspended") audioCtx.resume(); }
+};
+renderStatus();
+buildTray();
+renderRequestPanel();
+updateDecisionPanel(null);
+
+// ===================================================================
+// ===== §12 콘솔 검증용 (브라우저 콘솔 / Node 러너 공용) =============
+// ===================================================================
+
+// (1) __simulate(n): 만족도 "공식" sanity 체크 — 중급 고정·리롤 없음. SPEC §12 기준값과 비교.
+window.__simulate = function(n){
+  n = n || 10000;
+  const goals = SATISFACTION_GOAL;
+  let cnt = {초급:0,중급:0,고급:0,특급:0}, satSum = 0;
+  for(let i=0;i<n;i++){
+    const a = spawnAdventurer("중급");
+    const used=[], slots=[];
+    for(let k=0;k<4;k++){ const s=rollSlot(a.weapon,a.job,used); used.push(s.attr); slots.push(s); }
+    const sat = satisfaction(slots, a.weapon, a.job, a.mood);
+    satSum += sat;
+    for(const g in goals) if(sat >= goals[g]) cnt[g]++;
+  }
+  const r = {평균만족도:(satSum/n).toFixed(1)};
+  for(const g in goals) r[g] = (cnt[g]/n*100).toFixed(1)+"%";
+  console.table(r); return r;
+};
+
+// 리롤 전략(시뮬용): slotValue가 threshold 이하인 슬롯을 예산 내에서 다시 굴린다.
+//  - threshold=0  → 죽은 슬롯(무효·저주실패=0점)만 리롤(보수적·합리적 기본)
+//  - threshold>0  → 약한 슬롯까지 공격적으로 리롤
+//  committed: 이미 확정된 이전 슬롯들(속성 중복 금지용). budgetRef.left: 남은 리롤.
+function simRollSlot(adv, committed, budgetRef, threshold){
+  const usedOthers = committed.map(s => s.attr);
+  let s = rollSlot(adv.weapon, adv.job, usedOthers);
+  while(budgetRef.left > 0 && slotValue(s.attr, s.tier, adv.weapon, adv.job, adv.mood) <= threshold){
+    budgetRef.left--;
+    s = rollSlot(adv.weapon, adv.job, usedOthers);
+  }
+  return s;
+}
+
+// (2) __simulateGame(opts): "실제 한 판" 생존 시뮬 — 생명3·난이도 곡선·리롤 포함.
+//   opts = { games, rerolls, threshold }
+//   rerolls=0 이면 리롤 도입 전 원본 게임과 동일 분포(= SPEC §12의 "한 판 ~10명" 교차검증).
+window.__simulateGame = function(opts){
+  opts = opts || {};
+  const games     = opts.games     != null ? opts.games     : 20000;
+  const rerolls   = opts.rerolls   != null ? opts.rerolls   : REROLLS_PER_CUSTOMER;
+  const threshold = opts.threshold != null ? opts.threshold : 0;
+  const gradeFn   = opts.gradeFn   || gradeByProgress;     // 난이도 곡선 후보 비교용
+
+  const satCounts = [], scores = [];
+  let satPctSum = 0, customers = 0;
+  const seen    = {초급:0,중급:0,고급:0,특급:0};
+  const cleared = {초급:0,중급:0,고급:0,특급:0};
+
+  for(let g=0; g<games; g++){
+    const st = newGame();
+    while(!st.over){
+      const grade = gradeFn(st.satisfied);
+      const adv   = spawnAdventurer(grade);
+      const budgetRef = { left: rerolls };
+      const slots = [];
+      for(let i=0;i<4;i++) slots.push(simRollSlot(adv, slots, budgetRef, threshold));
+      const sat = satisfaction(slots, adv.weapon, adv.job, adv.mood);
+      satPctSum += sat; customers++;
+      seen[grade]++; if(sat >= SATISFACTION_GOAL[grade]) cleared[grade]++;
+      resolveCustomer(st, grade, sat);
+    }
+    satCounts.push(st.satisfied);
+    scores.push(st.score);
+  }
+
+  satCounts.sort((a,b)=>a-b); scores.sort((a,b)=>a-b);
+  const mean = (a)=> a.reduce((x,y)=>x+y,0)/a.length;
+  const q    = (a,p)=> a[Math.min(a.length-1, Math.floor(a.length*p))];
+  const clearRate = {};
+  for(const k in seen) clearRate[k] = seen[k] ? +(cleared[k]/seen[k]*100).toFixed(1) : null;
+
+  const out = {
+    games, rerolls, threshold,
+    평균만족손님: +mean(satCounts).toFixed(2),
+    중앙값:       q(satCounts,0.5),
+    상위10퍼:     q(satCounts,0.9),
+    최고:         satCounts[satCounts.length-1],
+    평균점수:     Math.round(mean(scores)),
+    평균만족도:   +(satPctSum/customers).toFixed(1),
+    등급별클리어율: clearRate,
+  };
+  if(!opts.quiet) console.log(out);
+  return out;
+};
+</script>
+</body>
+</html>

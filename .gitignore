@@ -1,0 +1,5 @@
+.playwright-mcp/
+.omc/sessions/
+.omc/state/
+blacksmith-polish-mobile.png
+blacksmith-workbench-expanded.png
