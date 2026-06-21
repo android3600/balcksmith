@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta http-equiv="refresh" content="0; url=blacksmith.html">
+  <link rel="canonical" href="blacksmith.html">
+  <title>대장장이 키우기</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: #120f0d;
+      color: #f7ead2;
+    }
+
+    body {
+      min-height: 100vh;
+      margin: 0;
+      display: grid;
+      place-items: center;
+      padding: 24px;
+      text-align: center;
+    }
+
+    a {
+      color: #ffd17a;
+      font-weight: 700;
+      text-decoration: none;
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <p>대장장이 키우기를 여는 중입니다.</p>
+    <p><a href="blacksmith.html">바로 열기</a></p>
+  </main>
+  <script>
+    const target = new URL("blacksmith.html", location.href);
+    target.search = location.search;
+    target.hash = location.hash;
+    location.replace(target);
+  </script>
+</body>
+</html>
